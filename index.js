@@ -37,6 +37,7 @@ async function run() {
     const usersCollection = db.collection("users");
     const skillsCollection = db.collection("skills");
     const categoriesCollection = db.collection("categories");
+    const exchangesCollection = db.collection("exchanges");
 
     // create a new skill
     app.post("/create-skills", async (req, res) => {
@@ -52,10 +53,20 @@ async function run() {
     });
 
     // get single skill by id
-    app.get("/get-skills/:id", async (req, res) => {
+    app.get("/get-skill/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await skillsCollection.findOne(query);
+      res.send(result);
+    });
+
+    // get all skills (by email) added by a specific user
+    app.get("/get-skills/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = {
+        creatorEmail: email,
+      };
+      const result = await skillsCollection.find(query).toArray();
       res.send(result);
     });
 
@@ -64,6 +75,15 @@ async function run() {
       const result = await categoriesCollection.find().toArray();
       res.send(result);
     });
+
+    // save exchange requested skills in db
+    app.post("/exchanges", async (req, res) => {
+      const newExchange = req.body;
+      const result = await exchangesCollection.insertOne(newExchange);
+      res.send(result);
+    });
+
+    //---------------users related apis are below-------------------------
 
     // save or update users in db
     app.post("/users/:email", async (req, res) => {
