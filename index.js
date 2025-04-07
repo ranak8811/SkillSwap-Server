@@ -46,10 +46,50 @@ async function run() {
       res.send(result);
     });
 
-    // get all skills
+    // // get all skills
+    // app.get("/get-skills", async (req, res) => {
+    //   const { searchParams, page, size } = req.query;
+    //   const pageNumber = parseInt(page);
+    //   const sizeNumber = parseInt(size);
+    //   // console.log("Pagination: ", pageNumber, sizeNumber);
+    //   let option = {};
+    //   if (searchParams) {
+    //     option = {
+    //       name: { $regex: searchParams, $options: "i" },
+    //     };
+    //   }
+    //   const cursor = skillsCollection
+    //     .find(option)
+    //     .skip(pageNumber * sizeNumber)
+    //     .limit(sizeNumber);
+    //   const result = await cursor.toArray();
+    //   res.send(result);
+    // });
+
     app.get("/get-skills", async (req, res) => {
-      const result = await skillsCollection.find().toArray();
-      res.send(result);
+      const { searchParams, page, size, sortByDate } = req.query;
+      const pageNumber = parseInt(page) || 0;
+      const sizeNumber = parseInt(size) || 5;
+
+      let query = {};
+      if (searchParams) {
+        query = {
+          category: { $regex: searchParams, $options: "i" },
+        };
+      }
+
+      const sortOption = sortByDate === "true" ? { createdAt: -1 } : {};
+
+      const cursor = skillsCollection
+        .find(query)
+        .sort(sortOption)
+        .skip(pageNumber * sizeNumber)
+        .limit(sizeNumber);
+
+      const result = await cursor.toArray();
+      const count = await skillsCollection.countDocuments(query);
+
+      res.send({ skills: result, count });
     });
 
     // get single skill by id
@@ -63,9 +103,7 @@ async function run() {
     // get all skills (by email) added by a specific user
     app.get("/get-skills/:email", async (req, res) => {
       const email = req.params.email;
-      const query = {
-        creatorEmail: email,
-      };
+      const query = { creatorEmail: email };
       const result = await skillsCollection.find(query).toArray();
       res.send(result);
     });
