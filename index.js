@@ -1,5 +1,5 @@
 require("dotenv").config();
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
@@ -45,6 +45,21 @@ async function run() {
       res.send(result);
     });
 
+    // get all skills
+    app.get("/get-skills", async (req, res) => {
+      const result = await skillsCollection.find().toArray();
+      res.send(result);
+    });
+
+    // get single skill by id
+    app.get("/get-skills/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await skillsCollection.findOne(query);
+      res.send(result);
+    });
+
+    // get all categories
     app.get("/categories", async (req, res) => {
       const result = await categoriesCollection.find().toArray();
       res.send(result);
