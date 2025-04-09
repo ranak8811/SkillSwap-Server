@@ -38,6 +38,7 @@ async function run() {
     const skillsCollection = db.collection("skills");
     const categoriesCollection = db.collection("categories");
     const exchangesCollection = db.collection("exchanges");
+    const savedSkillsCollection = db.collection("savedSkills");
 
     // create a new skill
     app.post("/create-skills", async (req, res) => {
@@ -45,26 +46,6 @@ async function run() {
       const result = await skillsCollection.insertOne(newSkill);
       res.send(result);
     });
-
-    // // get all skills
-    // app.get("/get-skills", async (req, res) => {
-    //   const { searchParams, page, size } = req.query;
-    //   const pageNumber = parseInt(page);
-    //   const sizeNumber = parseInt(size);
-    //   // console.log("Pagination: ", pageNumber, sizeNumber);
-    //   let option = {};
-    //   if (searchParams) {
-    //     option = {
-    //       name: { $regex: searchParams, $options: "i" },
-    //     };
-    //   }
-    //   const cursor = skillsCollection
-    //     .find(option)
-    //     .skip(pageNumber * sizeNumber)
-    //     .limit(sizeNumber);
-    //   const result = await cursor.toArray();
-    //   res.send(result);
-    // });
 
     app.get("/get-skills", async (req, res) => {
       const { searchParams, page, size, sortByDate } = req.query;
@@ -121,6 +102,46 @@ async function run() {
       res.send(result);
     });
 
+    // save a skills for later
+    app.post("/save-skill", async (req, res) => {
+      const saveNewSkill = req.body;
+      const result = await savedSkillsCollection.insertOne(saveNewSkill);
+      res.send(result);
+    });
+
+    // GET paginated & searchable saved skills
+    app.get("/get-saved-skills", async (req, res) => {
+      const email = req.query.email;
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const search = req.query.search || "";
+
+      const query = {
+        savedUserEmail: email,
+        skillTitle: { $regex: search, $options: "i" },
+      };
+
+      try {
+        const total = await savedSkillsCollection.countDocuments(query);
+        const skills = await savedSkillsCollection
+          .find(query)
+          .skip((page - 1) * limit)
+          .limit(limit)
+          .toArray();
+
+        res.send({ total, skills });
+      } catch (err) {
+        res.status(500).send({ message: "Failed to load saved skills" });
+      }
+    });
+
+    // DELETE skill by skillId
+    app.delete("/delete-saved-skill/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await savedSkillsCollection.deleteOne({ skillId: id });
+      res.send(result);
+    });
+
     //---------------users related apis are below-------------------------
 
     // save or update users in db
@@ -149,6 +170,41 @@ async function run() {
       console.log(users.length);
       len = users.length;
       res.send(`there are ${users.length} users`);
+    });
+
+    // get user role
+    app.get("/users/role/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await usersCollection.findOne({ email });
+      res.send({ role: result?.role });
+    });
+
+    // get user by email
+    app.get("/user/:email", async (req, res) => {
+      const email = req.params.email;
+      const result = await usersCollection.findOne({ email });
+      res.send(result);
+    });
+
+    // update user information by PATCH /user/:email
+    app.patch("/user/:email", async (req, res) => {
+      const email = req.params.email;
+      const updates = req.body;
+
+      try {
+        const result = await usersCollection.updateOne(
+          { email },
+          { $set: updates }
+        );
+
+        if (result.matchedCount === 0) {
+          return res.status(404).send({ message: "User not found" });
+        }
+
+        res.send({ message: "User updated successfully" });
+      } catch (error) {
+        res.status(500).send({ message: "Update failed", error });
+      }
     });
 
     //-----------------------------End-----------------------------------
