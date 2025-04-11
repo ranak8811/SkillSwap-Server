@@ -102,6 +102,62 @@ async function run() {
       res.send(result);
     });
 
+    // GET paginated + searchable exchange requests for a user
+    app.get("/exchanges/:email", async (req, res) => {
+      const { email } = req.params;
+      const { search = "", page = 1, limit = 10 } = req.query;
+      const skip = (parseInt(page) - 1) * parseInt(limit);
+
+      const filter = {
+        creatorEmail: email,
+        title: { $regex: search, $options: "i" },
+      };
+
+      const total = await exchangesCollection.countDocuments(filter);
+      const requests = await exchangesCollection
+        .find(filter)
+        .skip(skip)
+        .limit(parseInt(limit))
+        .toArray();
+
+      res.send({ total, requests });
+    });
+
+    // PATCH: update exchange status
+    app.patch("/exchanges/:id", async (req, res) => {
+      const id = req.params.id;
+      const { status, creatorSkillId, applicationSkillId } = req.body;
+
+      const exchange = await exchangesCollection.findOne({
+        _id: new ObjectId(id),
+      });
+
+      if (!exchange)
+        return res.status(404).send({ message: "Exchange not found" });
+
+      if (exchange.status === "Accepted") {
+        return res
+          .status(400)
+          .send({ message: "Already accepted. Cannot update." });
+      }
+
+      const updateDoc = { $set: { status } };
+      await exchangesCollection.updateOne({ _id: new ObjectId(id) }, updateDoc);
+
+      if (status === "Accepted") {
+        await skillsCollection.updateOne(
+          { _id: new ObjectId(creatorSkillId) },
+          { $set: { available: false } }
+        );
+        await skillsCollection.updateOne(
+          { _id: new ObjectId(applicationSkillId) },
+          { $set: { available: false } }
+        );
+      }
+
+      res.send({ message: "Status updated" });
+    });
+
     // save a skills for later
     app.post("/save-skill", async (req, res) => {
       const saveNewSkill = req.body;
