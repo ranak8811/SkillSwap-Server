@@ -39,6 +39,8 @@ async function run() {
     const categoriesCollection = db.collection("categories");
     const exchangesCollection = db.collection("exchanges");
     const savedSkillsCollection = db.collection("savedSkills");
+    const reviewsCollection = db.collection("reviews");
+    const reportsCollection = db.collection("reports");
 
     // create a new skill
     app.post("/create-skills", async (req, res) => {
@@ -197,6 +199,114 @@ async function run() {
       const result = await savedSkillsCollection.deleteOne({ skillId: id });
       res.send(result);
     });
+
+    //------------reviews and reports related apis starts here------------
+
+    // // get all accepted exchanges for a specific user
+    // app.get("/accepted-exchanges/:email", async (req, res) => {
+    //   try {
+    //     // Good practice to wrap async operations in try...catch
+    //     const email = req.params.email;
+
+    //     // Construct the query using $or
+    //     const query = {
+    //       $or: [
+    //         // Check if either of these conditions is true
+    //         { creatorEmail: email },
+    //         { applicationUserEmail: email },
+    //       ],
+    //       status: "Accepted", // And this condition must also be true
+    //     };
+
+    //     console.log("Executing query:", JSON.stringify(query)); // Optional: Log the query for debugging
+
+    //     const result = await exchangesCollection.find(query).toArray();
+    //     res.send(result);
+    //   } catch (error) {
+    //     console.error("Error fetching accepted exchanges:", error);
+    //     res.status(500).send({ message: "Failed to fetch accepted exchanges" }); // Send an error response
+    //   }
+    // });
+
+    // // save a review for a skill
+    // app.post("/review", async (req, res) => {
+    //   const newReview = req.body;
+    //   const result = await reviewsCollection.insertOne(newReview);
+    //   res.send(result);
+    // });
+
+    // // save a report for a skill
+    // app.post("/report", async (req, res) => {
+    //   const newReport = req.body;
+    //   const result = await reportsCollection.insertOne(newReport);
+    //   res.send(result);
+    // });
+
+    // Backend Express Routes
+
+    // Get all accepted exchanges for a specific user
+    app.get("/accepted-exchanges/:email", async (req, res) => {
+      try {
+        const email = req.params.email;
+        const query = {
+          $or: [{ creatorEmail: email }, { applicationUserEmail: email }],
+          status: "Accepted",
+        };
+        const result = await exchangesCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        console.error("Error fetching accepted exchanges:", error);
+        res.status(500).send({ message: "Failed to fetch accepted exchanges" });
+      }
+    });
+
+    // Save a review for a skill
+    app.post("/review", async (req, res) => {
+      try {
+        const newReview = req.body;
+        const { reviewerEmail, skillId } = newReview;
+
+        // Prevent duplicate review
+        const existing = await reviewsCollection.findOne({
+          reviewerEmail,
+          skillId,
+        });
+        if (existing) {
+          return res.status(400).send({ message: "Review already submitted." });
+        }
+
+        const result = await reviewsCollection.insertOne(newReview);
+        res.send(result);
+      } catch (error) {
+        console.error("Error saving review:", error);
+        res.status(500).send({ message: "Failed to save review" });
+      }
+    });
+
+    // Save a report for a skill
+    app.post("/report", async (req, res) => {
+      try {
+        const newReport = req.body;
+        const { reporterEmail, skillId } = newReport;
+
+        // Prevent duplicate report
+        const existing = await reportsCollection.findOne({
+          reporterEmail,
+          skillId,
+        });
+        if (existing) {
+          return res.status(400).send({ message: "Report already submitted." });
+        }
+
+        const result = await reportsCollection.insertOne(newReport);
+        res.send(result);
+      } catch (error) {
+        console.error("Error saving report:", error);
+        res.status(500).send({ message: "Failed to save report" });
+      }
+    });
+
+    //------------reviews and reports related apis ends here------------
 
     //---------------users related apis are below-------------------------
 
