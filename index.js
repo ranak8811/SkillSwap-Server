@@ -306,7 +306,55 @@ async function run() {
       }
     });
 
+    // Get all reviews and reports for a specific skill
+    app.get("/reviews-and-reports/:skillId", async (req, res) => {
+      try {
+        const skillId = req.params.skillId;
+        const reviews = await reviewsCollection.find({ skillId }).toArray();
+        const reports = await reportsCollection.find({ skillId }).toArray();
+        res.send({ reviews, reports });
+      } catch (error) {
+        console.error("Error fetching reviews and reports:", error);
+        res
+          .status(500)
+          .send({ message: "Failed to fetch reviews and reports" });
+      }
+    });
+
     //------------reviews and reports related apis ends here------------
+
+    //-----------trending skills and about us apis starts here-----------
+
+    // Backend: Trending skills API
+    app.get("/trending-skills", async (req, res) => {
+      try {
+        const pipeline = [
+          {
+            $group: {
+              _id: "$category",
+              count: { $sum: 1 },
+            },
+          },
+          { $sort: { count: -1 } },
+          { $limit: 5 },
+          {
+            $project: {
+              category: "$_id",
+              count: 1,
+              _id: 0,
+            },
+          },
+        ];
+
+        const result = await skillsCollection.aggregate(pipeline).toArray();
+        res.send(result);
+      } catch (error) {
+        console.error("Error fetching trending skills:", error);
+        res.status(500).send({ message: "Failed to fetch trending skills" });
+      }
+    });
+
+    //-----------trending skills and about us apis ends here-----------
 
     //---------------users related apis are below-------------------------
 
