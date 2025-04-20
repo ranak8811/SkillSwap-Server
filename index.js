@@ -202,48 +202,6 @@ async function run() {
 
     //------------reviews and reports related apis starts here------------
 
-    // // get all accepted exchanges for a specific user
-    // app.get("/accepted-exchanges/:email", async (req, res) => {
-    //   try {
-    //     // Good practice to wrap async operations in try...catch
-    //     const email = req.params.email;
-
-    //     // Construct the query using $or
-    //     const query = {
-    //       $or: [
-    //         // Check if either of these conditions is true
-    //         { creatorEmail: email },
-    //         { applicationUserEmail: email },
-    //       ],
-    //       status: "Accepted", // And this condition must also be true
-    //     };
-
-    //     console.log("Executing query:", JSON.stringify(query)); // Optional: Log the query for debugging
-
-    //     const result = await exchangesCollection.find(query).toArray();
-    //     res.send(result);
-    //   } catch (error) {
-    //     console.error("Error fetching accepted exchanges:", error);
-    //     res.status(500).send({ message: "Failed to fetch accepted exchanges" }); // Send an error response
-    //   }
-    // });
-
-    // // save a review for a skill
-    // app.post("/review", async (req, res) => {
-    //   const newReview = req.body;
-    //   const result = await reviewsCollection.insertOne(newReview);
-    //   res.send(result);
-    // });
-
-    // // save a report for a skill
-    // app.post("/report", async (req, res) => {
-    //   const newReport = req.body;
-    //   const result = await reportsCollection.insertOne(newReport);
-    //   res.send(result);
-    // });
-
-    // Backend Express Routes
-
     // Get all accepted exchanges for a specific user
     app.get("/accepted-exchanges/:email", async (req, res) => {
       try {
@@ -355,6 +313,49 @@ async function run() {
     });
 
     //-----------trending skills and about us apis ends here-----------
+
+    //-----------admin related apis starts here-----------
+
+    // Get all users with optional search and pagination
+    app.get("/allUsers", async (req, res) => {
+      const search = req.query.search || "";
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const skip = (page - 1) * limit;
+
+      const query = {
+        name: { $regex: search, $options: "i" }, // case-insensitive search
+      };
+
+      const users = await usersCollection
+        .find(query)
+        .skip(skip)
+        .limit(limit)
+        .toArray();
+      await usersCollection.countDocuments(query);
+
+      res.send(users);
+    });
+
+    // Update user role
+    app.patch("/make-role/:id", async (req, res) => {
+      const id = req.params.id;
+      const { role } = req.body;
+      const result = await usersCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { role } }
+      );
+      res.send(result);
+    });
+
+    // Delete user
+    app.delete("/delete-user/:id", async (req, res) => {
+      const id = req.params.id;
+      const result = await usersCollection.deleteOne({ _id: new ObjectId(id) });
+      res.send(result);
+    });
+
+    //-----------admin related apis ends here-----------
 
     //---------------users related apis are below-------------------------
 
