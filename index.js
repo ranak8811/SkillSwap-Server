@@ -279,11 +279,34 @@ async function run() {
       }
     });
 
+    // Get all reports
+    app.get("/all-reports", async (req, res) => {
+      try {
+        const reports = await reportsCollection.find().toArray();
+        res.send(reports);
+      } catch (err) {
+        res.status(500).send({ error: "Failed to fetch reports" });
+      }
+    });
+
+    // Delete a report
+    app.delete("/delete-report/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const result = await reportsCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+        res.send(result);
+      } catch (err) {
+        res.status(500).send({ error: "Failed to delete report" });
+      }
+    });
+
     //------------reviews and reports related apis ends here------------
 
     //-----------trending skills and about us apis starts here-----------
 
-    // Backend: Trending skills API
+    // Trending skills API
     app.get("/trending-skills", async (req, res) => {
       try {
         const pipeline = [
