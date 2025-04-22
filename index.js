@@ -41,6 +41,7 @@ async function run() {
     const savedSkillsCollection = db.collection("savedSkills");
     const reviewsCollection = db.collection("reviews");
     const reportsCollection = db.collection("reports");
+    const userSuggestionsCollection = db.collection("userSuggestions");
 
     // create a new skill
     app.post("/create-skills", async (req, res) => {
@@ -94,6 +95,21 @@ async function run() {
     // get all categories
     app.get("/categories", async (req, res) => {
       const result = await categoriesCollection.find().toArray();
+      res.send(result);
+    });
+
+    // Add a new category
+    app.post("/categories", async (req, res) => {
+      const newCategory = req.body;
+      const result = await categoriesCollection.insertOne(newCategory);
+      res.send(result);
+    });
+
+    // Delete a category
+    app.delete("/categories/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await categoriesCollection.deleteOne(query);
       res.send(result);
     });
 
@@ -199,6 +215,56 @@ async function run() {
       const result = await savedSkillsCollection.deleteOne({ skillId: id });
       res.send(result);
     });
+
+    //------------user suggestions related apis starts here------------
+
+    // Add a user suggestion
+    app.post("/user-suggestions", async (req, res) => {
+      try {
+        const newUserSuggestion = req.body;
+        newUserSuggestion.status = "asked";
+        const result = await userSuggestionsCollection.insertOne(
+          newUserSuggestion
+        );
+        res.send(result);
+      } catch (err) {
+        res
+          .status(500)
+          .send({ message: "Failed to submit suggestion", error: err });
+      }
+    });
+
+    // Get all user suggestions
+    app.get("/user-suggestions", async (req, res) => {
+      try {
+        const result = await userSuggestionsCollection.find().toArray();
+        res.send(result);
+      } catch (err) {
+        res
+          .status(500)
+          .send({ message: "Failed to fetch suggestions", error: err });
+      }
+    });
+
+    // Update a user suggestion status
+    app.patch("/user-suggestions/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const { status } = req.body;
+        const updateDoc = { $set: { status } };
+        const result = await userSuggestionsCollection.updateOne(
+          { _id: new ObjectId(id) },
+          updateDoc
+        );
+        res.send(result);
+      } catch (err) {
+        res
+          .status(500)
+          .send({ message: "Failed to update suggestion status", error: err });
+      }
+    });
+
+    //------------user suggestions related apis ends here------------
 
     //------------reviews and reports related apis starts here------------
 
