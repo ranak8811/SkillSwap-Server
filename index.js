@@ -427,7 +427,7 @@ async function run() {
     });
 
     // Update user role
-    app.patch("/make-role/:id", async (req, res) => {
+    app.patch("/make-admin/:id", async (req, res) => {
       const id = req.params.id;
       const { role } = req.body;
       const result = await usersCollection.updateOne(
